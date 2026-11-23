@@ -1,0 +1,795 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Squad Spin</title>
+<meta name="description" content="Pick your Steam friends, pick a vibe, spin the wheel to decide what to play.">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎡</text></svg>">
+<style>
+:root{
+  --bg:#0d1117; --panel:#161b22; --panel2:#1c2330; --line:#2a3342; --text:#e6edf3; --muted:#8b98a9;
+  --accent:#66c0f4; --good:#3fb950; --warn:#d29922; --bad:#f85149; --radius:14px;
+}
+*{box-sizing:border-box}
+body{margin:0;background:radial-gradient(1200px 600px at 70% -10%,#1b2a44 0%,transparent 60%),var(--bg);color:var(--text);
+  font:15px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;min-height:100vh}
+button,input,select{font:inherit;color:inherit}
+button{cursor:pointer}
+header{display:flex;align-items:center;gap:12px;padding:14px 20px;border-bottom:1px solid var(--line)}
+header h1{font-size:20px;margin:0;letter-spacing:.3px}
+header .tag{color:var(--muted);font-size:13px}
+.badge{font-size:11px;padding:2px 8px;border-radius:99px;background:#3b2f0b;color:#f2cc60;border:1px solid #6b5313}
+.spacer{flex:1}
+.icon-btn{background:none;border:1px solid var(--line);border-radius:10px;padding:6px 10px}
+.layout{display:grid;grid-template-columns:330px 1fr;gap:18px;padding:18px 20px;max-width:1400px;margin:0 auto}
+@media (max-width:900px){.layout{grid-template-columns:1fr;padding:14px 16px}}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:16px}
+.panel h2{font-size:14px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin:0 0 10px}
+.row{display:flex;gap:8px;align-items:center}
+.row > input{flex:1;min-width:0}
+input[type=text],input[type=search]{background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:9px 11px;outline:none}
+input:focus{border-color:var(--accent)}
+.btn{background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:9px 13px;white-space:nowrap}
+.btn:hover{border-color:#3d4a5f}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:#06121c;font-weight:600}
+.btn.small{padding:5px 9px;font-size:13px}
+.btn:disabled{opacity:.5;cursor:default}
+.status{font-size:13px;color:var(--muted);margin:8px 0 0;min-height:1em}
+.status.err{color:var(--bad)}
+.me{display:flex;align-items:center;gap:10px;margin-top:12px;padding:8px;border-radius:10px;background:var(--panel2)}
+.avatar{width:34px;height:34px;border-radius:8px;flex:none;object-fit:cover;background:#2a3342;display:grid;place-items:center;font-weight:700;font-size:13px}
+.friends-tools{display:flex;gap:6px;margin:12px 0 8px;flex-wrap:wrap;align-items:center}
+.friends-tools input{flex:1;min-width:120px}
+.list{max-height:46vh;overflow:auto;margin:0 -6px;padding:0 6px}
+.friend{display:flex;align-items:center;gap:10px;padding:7px 8px;border-radius:10px;cursor:pointer;border:1px solid transparent;user-select:none}
+.friend:hover{background:var(--panel2)}
+.friend.sel{background:#16304a;border-color:#245a85}
+.friend .meta{min-width:0;flex:1}
+.friend .name{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-weight:500}
+.friend .sub{font-size:12px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.friend .sub.ingame{color:#a3cf06}
+.friend .sub.online{color:var(--accent)}
+.check{width:20px;height:20px;border-radius:6px;border:1.5px solid #46546a;flex:none;display:grid;place-items:center;font-size:13px}
+.friend.sel .check{background:var(--accent);border-color:var(--accent);color:#06121c}
+.count{font-size:13px;color:var(--muted)}
+.empty{color:var(--muted);font-size:14px;padding:14px 4px;text-align:center}
+label.toggle{display:flex;gap:8px;align-items:center;font-size:14px;cursor:pointer;color:var(--muted)}
+.cats{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px}
+.cat{border:1px solid var(--line);background:var(--panel);border-radius:99px;padding:8px 14px;font-weight:600}
+.cat.active{background:var(--c);border-color:var(--c);color:#0b0f14}
+.main-grid{display:grid;grid-template-columns:minmax(0,1.25fr) minmax(0,1fr);gap:18px}
+@media (max-width:1150px){.main-grid{grid-template-columns:1fr}}
+.wheel-card{display:flex;flex-direction:column;align-items:center;gap:14px}
+.cat-head{width:100%;display:flex;align-items:flex-start;gap:10px}
+.cat-head h3{margin:0;font-size:22px}
+.cat-head p{margin:2px 0 0;color:var(--muted)}
+.seg{display:inline-flex;background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:3px}
+.seg button{background:none;border:0;padding:6px 11px;border-radius:8px;color:var(--muted);font-size:14px}
+.seg button.on{background:#2b3648;color:var(--text)}
+.controls{display:flex;gap:10px;flex-wrap:wrap;justify-content:center;align-items:center;width:100%}
+.wheel-wrap{position:relative;width:min(100%,500px);aspect-ratio:1}
+.wheel-wrap canvas{width:100%;height:100%;display:block}
+.pointer{position:absolute;left:50%;top:-6px;transform:translateX(-50%);width:0;height:0;border-left:16px solid transparent;border-right:16px solid transparent;border-top:30px solid #fff;filter:drop-shadow(0 3px 4px rgba(0,0,0,.5));z-index:2}
+.spin{font-size:18px;padding:13px 40px;border-radius:99px;border:0;background:var(--c,var(--accent));color:#0b0f14;font-weight:800;letter-spacing:.04em;box-shadow:0 6px 24px -8px var(--c,var(--accent))}
+.spin:disabled{opacity:.5}
+.hint{font-size:13px;color:var(--muted);text-align:center}
+.games{display:flex;flex-direction:column;gap:6px;max-height:420px;overflow:auto;margin:0 -6px;padding:0 6px}
+.game{display:flex;align-items:center;gap:10px;padding:7px 10px;background:var(--panel2);border-radius:10px;border:1px solid transparent}
+.game.out{opacity:.45}
+.game .gname{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.own{font-size:12px;padding:2px 8px;border-radius:99px;background:#2a3342;color:var(--muted);flex:none}
+.own.all{background:#123d22;color:#56d364}
+.own.some{background:#3b2f0b;color:#e3b341}
+.own.none{background:#3d1214;color:#ff7b72}
+.x{background:none;border:0;color:var(--muted);font-size:18px;line-height:1;padding:0 4px}
+.x:hover{color:var(--bad)}
+.add-row{display:flex;gap:8px;margin-top:10px}
+.add-row input{flex:1;min-width:0}
+.section{margin-top:18px}
+.hist{list-style:none;margin:0;padding:0;font-size:14px}
+.hist li{display:flex;gap:8px;padding:5px 0;border-bottom:1px dashed var(--line)}
+.hist li span:last-child{margin-left:auto;color:var(--muted);font-size:12px}
+.modal{position:fixed;inset:0;background:rgba(5,8,12,.72);display:none;place-items:center;z-index:50;padding:16px}
+.modal.open{display:grid}
+.result{background:var(--panel);border:2px solid var(--c);border-radius:20px;padding:28px 26px;text-align:center;max-width:460px;width:100%;animation:pop .35s cubic-bezier(.2,1.6,.4,1)}
+@keyframes pop{from{transform:scale(.6);opacity:0}to{transform:scale(1);opacity:1}}
+.result .kicker{color:var(--muted);text-transform:uppercase;letter-spacing:.12em;font-size:12px}
+.result .big{font-size:32px;font-weight:800;margin:8px 0 6px;word-break:break-word}
+.result .flavor{color:var(--muted);margin-bottom:18px}
+.result .actions{display:flex;gap:8px;justify-content:center;flex-wrap:wrap}
+a{color:var(--accent)}
+.tabs{margin-bottom:14px}
+.tabs button{font-weight:600;padding:8px 14px}
+.common-list{display:flex;flex-direction:column;gap:6px;margin-top:10px}
+.cg{display:flex;align-items:center;gap:12px;padding:8px 10px;background:var(--panel2);border-radius:10px}
+.cg img{width:92px;height:43px;border-radius:6px;object-fit:cover;flex:none;background:#2a3342}
+.cg .meta{flex:1;min-width:0}
+.cg .gname{font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.cg .sub{font-size:12px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.cg .missing{color:#e3b341}
+.cg select{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:5px 6px;font-size:13px}
+.demo-box{margin-top:10px;padding:10px;border-radius:10px;background:#1f1a0b;border:1px solid #4d3d12;font-size:13px;color:#e3c87a}
+</style>
+</head>
+<body>
+<header>
+  <span style="font-size:26px">🎡</span>
+  <div>
+    <h1>Squad Spin</h1>
+    <div class="tag">Pick the squad. Pick the vibe. Let the wheel decide.</div>
+  </div>
+  <span id="demoBadge" class="badge" hidden>DEMO</span>
+  <div class="spacer"></div>
+  <button id="soundBtn" class="icon-btn" title="Toggle sound">🔊</button>
+</header>
+
+<div class="layout">
+  <!-- Squad -->
+  <aside class="panel">
+    <h2>Steam API key <span id="keyState" class="count"></span></h2>
+    <div class="row">
+      <input id="keyInput" type="password" placeholder="Paste your Steam Web API key" autocomplete="off" spellcheck="false">
+      <button id="keyBtn" class="btn">Use</button>
+    </div>
+    <div class="status" id="keyStatus">Get one at <a href="https://steamcommunity.com/dev/apikey" target="_blank" rel="noopener">steamcommunity.com/dev/apikey</a>. It's kept in this tab only and forgotten when you close it.</div>
+
+    <h2 style="margin-top:18px">You</h2>
+    <div class="row">
+      <input id="meInput" type="text" placeholder="Friend code, Steam ID or profile URL" autocomplete="off">
+      <button id="loadBtn" class="btn primary">Load</button>
+    </div>
+    <div id="meStatus" class="status"></div>
+    <div id="meCard"></div>
+    <div id="demoBox" class="demo-box" hidden>
+      No Steam API key yet. Paste one above, or <button id="demoBtn" class="btn small">Try a demo squad</button>
+    </div>
+
+    <h2 style="margin-top:18px">Friends <span id="selCount" class="count"></span></h2>
+    <div class="friends-tools">
+      <input id="search" type="search" placeholder="Search friends">
+      <button id="allBtn" class="btn small">All</button>
+      <button id="noneBtn" class="btn small">None</button>
+    </div>
+    <div id="friends" class="list"></div>
+    <div class="row" style="margin-top:10px">
+      <input id="addFriendInput" type="text" placeholder="Add by friend code / URL" autocomplete="off">
+      <button id="addFriendBtn" class="btn">Add</button>
+    </div>
+    <div id="friendStatus" class="status"></div>
+    <label class="toggle" style="margin-top:10px"><input id="includeMe" type="checkbox"> Include me on the wheels</label>
+  </aside>
+
+  <!-- Wheels -->
+  <main>
+    <div class="seg tabs" id="tabSeg">
+      <button data-tab="wheels">🎡 Wheels</button>
+      <button data-tab="common">🤝 Games in common</button>
+    </div>
+
+    <section id="commonView" class="panel" hidden>
+      <div class="cat-head">
+        <div style="flex:1">
+          <h3>🤝 Games in common</h3>
+          <p id="commonTag">Games owned by everyone you've selected.</p>
+        </div>
+      </div>
+      <div class="controls" style="justify-content:flex-start;margin:12px 0">
+        <div class="seg" id="commonSeg">
+          <button data-common="all">Everyone owns</button>
+          <button data-common="miss1">All but one</button>
+        </div>
+        <input id="commonSearch" type="search" placeholder="Search games" style="flex:1;min-width:140px">
+        <button id="commonCheckBtn" class="btn small">Check libraries</button>
+      </div>
+      <div class="hint" id="commonStatus" style="text-align:left"></div>
+      <div id="commonList" class="common-list"></div>
+    </section>
+
+    <div id="wheelsView">
+    <div id="cats" class="cats"></div>
+    <div class="main-grid">
+      <section class="panel wheel-card">
+        <div class="cat-head">
+          <div style="flex:1">
+            <h3 id="catTitle"></h3>
+            <p id="catTag"></p>
+          </div>
+          <button id="catMenuBtn" class="icon-btn" title="Rename or delete this wheel">✏️</button>
+        </div>
+        <div class="controls">
+          <div class="seg" id="modeSeg">
+            <button data-mode="games">🎮 Spin a game</button>
+            <button data-mode="friends">🧑‍🤝‍🧑 Spin a friend</button>
+          </div>
+        </div>
+        <div class="controls" id="filterRow">
+          <div class="seg" id="filterSeg">
+            <button data-filter="all">All games</button>
+            <button data-filter="most">Most own</button>
+            <button data-filter="everyone">Everyone owns</button>
+          </div>
+          <button id="libBtn" class="btn small">Check libraries</button>
+        </div>
+        <div class="hint" id="libStatus"></div>
+        <div class="wheel-wrap">
+          <div class="pointer"></div>
+          <canvas id="wheel" width="1000" height="1000" aria-label="Spinning wheel"></canvas>
+        </div>
+        <button id="spinBtn" class="spin">SPIN</button>
+        <div class="controls">
+          <label class="toggle"><input id="knockout" type="checkbox"> Knock out each pick</label>
+          <button id="resetKO" class="btn small" hidden>Bring everyone back</button>
+        </div>
+      </section>
+
+      <section class="panel">
+        <h2>Games on this wheel</h2>
+        <div id="games" class="games"></div>
+        <div class="add-row">
+          <input id="addGameInput" type="text" list="libList" placeholder="Add a game" autocomplete="off">
+          <datalist id="libList"></datalist>
+          <button id="addGameBtn" class="btn">Add</button>
+        </div>
+        <div class="row" style="margin-top:8px;flex-wrap:wrap">
+          <button id="sharedBtn" class="btn small">＋ Add games we all own</button>
+          <button id="resetCatBtn" class="btn small">Reset wheel</button>
+        </div>
+
+        <div class="section">
+          <h2>Recent spins</h2>
+          <ul id="history" class="hist"></ul>
+        </div>
+      </section>
+    </div>
+    </div>
+  </main>
+</div>
+
+<div id="modal" class="modal" role="dialog" aria-modal="true">
+  <div class="result" id="resultCard">
+    <div class="kicker" id="rKicker"></div>
+    <div class="big" id="rBig"></div>
+    <div class="flavor" id="rFlavor"></div>
+    <div class="actions">
+      <a id="rLaunch" class="btn primary" style="text-decoration:none" hidden>▶ Launch in Steam</a>
+      <button id="rAgain" class="btn">Spin again</button>
+      <button id="rClose" class="btn">Close</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ---------- Defaults ----------
+const DEFAULT_CATS = [
+  { id:'chill', emoji:'🛋️', name:'Chill Nights', color:'#7ee2b8', tagline:'Low stakes, good vibes, snacks within reach.',
+    flavor:['Grab a drink and get comfy.','No sweat tonight.','Vibes only.'],
+    games:[['Stardew Valley',413150],['Terraria',105600],['Valheim',892970],["Don't Starve Together",322330],['Deep Rock Galactic',548430],['Sea of Thieves',1172620],['Raft',648800],['Core Keeper',1621690],['Palworld',1623730]] },
+  { id:'weeknight', emoji:'🌙', name:'Weeknights', color:'#9db4ff', tagline:'Quick sessions. Still alive for work tomorrow.',
+    flavor:['One more round… then bed. Probably.','In and out by midnight.','Short and sweet.'],
+    games:[['Among Us',945360],['Fall Guys',1097150],['Rocket League',252950],['Golf With Your Friends',431240],['Phasmophobia',739630],['Lethal Company',1966720],['Brawlhalla',291550]] },
+  { id:'drunk', emoji:'🍻', name:'Drunk Nights', color:'#ffb454', tagline:'Controls optional. Coordination not required.',
+    flavor:['Hydrate between rounds.','Nobody remembers who won anyway.','Someone is definitely falling off a ledge.'],
+    games:[['Gang Beasts',285900],['Human: Fall Flat',477160],['Golf With Your Friends',431240],['Pummel Party',880940],['Totally Accurate Battle Simulator',508440],['Content Warning',2881650],['Party Animals',1260320],['Lethal Company',1966720]] },
+  { id:'comp', emoji:'🏆', name:'Competitive', color:'#ff6b81', tagline:'Lock in. Comms on. No excuses.',
+    flavor:['Lock in.','Ranked or nothing.','Warm-ups are for cowards.'],
+    games:[['Counter-Strike 2',730],['Dota 2',570],['Rocket League',252950],['Apex Legends',1172470],['PUBG: BATTLEGROUNDS',578080],["Tom Clancy's Rainbow Six Siege",359550],['Marvel Rivals',2767030],['THE FINALS',2073850]] },
+  { id:'ruin', emoji:'💀', name:'Friendship Ruiners', color:'#c084fc', tagline:'Nobody leaves this lobby as friends.',
+    flavor:['It was nice knowing you all.','Screenshots will be used as evidence.','The group chat will never recover.'],
+    games:[['Ultimate Chicken Horse',386940],['Pummel Party',880940],['Overcooked! 2',728880],['Gang Beasts',285900],['UNO',470220],['Golf It!',571740],['It Takes Two',1426210],['Worms W.M.D',327030]] },
+];
+const toGames = list => list.map(([name, appid]) => ({ name, appid }));
+const freshCats = () => DEFAULT_CATS.map(c => ({ ...c, flavor:[...c.flavor], games: toGames(c.games) }));
+
+// ---------- State ----------
+// Everything lives in memory only: nothing is written to disk or browser storage,
+// so closing or reloading the page starts fresh. Wipe anything older versions saved.
+try { localStorage.removeItem('squadspin.v1'); } catch {}
+const defaults = () => ({ meInput:'', me:null, friends:[], selected:[], includeMe:true, categories:freshCats(),
+  activeCat:'chill', filter:'all', mode:'games', history:[], demo:false, sound:true, knockout:false,
+  tab:'wheels', common:'all' });
+let S = defaults();
+const save = () => {};
+let apiKey = '';            // Steam Web API key, memory only
+const libs = {};            // steamid -> { private, ids:Set, names:Set, games:[] }
+const knocked = new Set();  // labels knocked out of the current wheel
+let rotation = 0, spinning = false;
+
+const $ = s => document.querySelector(s);
+const esc = s => String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const norm = s => String(s).toLowerCase().replace(/[^a-z0-9]/g, '');
+const cat = () => S.categories.find(c => c.id === S.activeCat) || S.categories[0];
+const pick = arr => arr[Math.floor(rand() * arr.length)];
+function rand(){ const a = new Uint32Array(1); crypto.getRandomValues(a); return a[0] / 2**32; }
+
+// ---------- Steam ----------
+const OFFSET = 76561197960265728n;
+function parseId(input){
+  input = input.trim();
+  let m = input.match(/steamcommunity\.com\/profiles\/(\d{17})/i); if (m) return { id:m[1] };
+  m = input.match(/steamcommunity\.com\/id\/([^\/?#\s]+)/i); if (m) return { vanity:m[1] };
+  if (/^7656\d{13}$/.test(input)) return { id:input };
+  m = input.match(/^\[?U:1:(\d+)\]?$/i); if (m) return { id:(BigInt(m[1]) + OFFSET).toString() };
+  if (/^\d{1,10}$/.test(input)) return { id:(BigInt(input) + OFFSET).toString() }; // friend code
+  if (/^[\w-]{2,32}$/.test(input)) return { vanity:input };
+  return null;
+}
+async function api(action, params = {}){
+  const r = await fetch('/api/steam?' + new URLSearchParams({ action, ...params }),
+    { headers: apiKey ? { 'X-Steam-Key': apiKey } : {}, cache: 'no-store' });
+  let data; try { data = await r.json(); } catch { throw new Error(`The server didn't answer properly (${r.status}).`); }
+  if (!r.ok) { const e = new Error(data.error || `Error ${r.status}`); e.code = data.code; throw e; }
+  return data;
+}
+async function resolveId(input){
+  const p = parseId(input);
+  if (!p) throw new Error("That doesn't look like a friend code, Steam ID or profile URL.");
+  if (p.id) return p.id;
+  return (await api('vanity', { vanityurl:p.vanity })).steamid;
+}
+async function summaries(ids){
+  const out = [];
+  for (let i = 0; i < ids.length; i += 100) out.push(...(await api('summaries', { steamids: ids.slice(i, i+100).join(',') })).players);
+  return out;
+}
+const stateText = p => p.game ? `Playing ${p.game}` : (['Offline','Online','Busy','Away','Snooze','Looking to trade','Looking to play'][p.state] || 'Offline');
+const rank = p => p.game ? 0 : p.state ? 1 : 2;
+const sortFriends = () => S.friends.sort((a,b) => rank(a) - rank(b) || a.name.localeCompare(b.name));
+
+async function loadMe(){
+  const input = $('#meInput').value.trim();
+  if (!input) return;
+  if ($('#keyInput').value.trim() && !useKey(false)) return; // a key typed but not applied yet
+  setStatus('#meStatus', 'Looking you up…');
+  $('#loadBtn').disabled = true;
+  try {
+    const id = await resolveId(input);
+    await summaries([id]); // checks the key before a bad key can look like a private friends list
+    S.demo = false; S.meInput = input;
+    let friendIds = [], privateMsg = '';
+    try { friendIds = (await api('friends', { steamid:id })).friends; }
+    catch (e) { if (e.code === 'private') privateMsg = e.message; else throw e; }
+    const players = await summaries([id, ...friendIds]);
+    S.me = players.find(p => p.steamid === id) || { steamid:id, name:'You', state:0 };
+    const manual = S.friends.filter(f => f.manual && !friendIds.includes(f.steamid));
+    S.friends = [...players.filter(p => p.steamid !== id), ...manual];
+    S.selected = S.selected.filter(sid => S.friends.some(f => f.steamid === sid));
+    sortFriends();
+    for (const k in libs) delete libs[k];
+    setStatus('#meStatus', privateMsg || `Loaded ${friendIds.length} friends.`, !!privateMsg);
+    save(); renderAll();
+  } catch (e) {
+    setStatus('#meStatus', e.message, true);
+    $('#demoBox').hidden = e.code !== 'nokey';
+    if (e.code === 'nokey' || e.code === 'badkey') $('#keyInput').focus();
+  } finally { $('#loadBtn').disabled = false; }
+}
+async function addFriend(){
+  const input = $('#addFriendInput').value.trim();
+  if (!input) return;
+  if (S.demo) return setStatus('#friendStatus', 'Adding friends needs the real Steam connection, not demo mode.', true);
+  setStatus('#friendStatus', 'Finding them…');
+  try {
+    const id = await resolveId(input);
+    if (S.me?.steamid === id) throw new Error("That's you!");
+    const [p] = await summaries([id]);
+    if (!p) throw new Error('No Steam profile found.');
+    if (!S.friends.some(f => f.steamid === id)) S.friends.push({ ...p, manual:true });
+    if (!S.selected.includes(id)) S.selected.push(id);
+    sortFriends(); save(); renderAll();
+    $('#addFriendInput').value = '';
+    setStatus('#friendStatus', `Added ${p.name}.`);
+  } catch (e) { setStatus('#friendStatus', e.message, true); }
+}
+function participants(){
+  const ids = [...S.selected];
+  if (S.includeMe && S.me) ids.unshift(S.me.steamid);
+  return ids;
+}
+function personName(id){ return id === S.me?.steamid ? (S.me.name + ' (you)') : (S.friends.find(f => f.steamid === id)?.name || 'Unknown'); }
+function setLib(id, games){
+  libs[id] = games === null ? { private:true } :
+    { private:false, games, ids:new Set(games.map(g => g.appid)), names:new Set(games.map(g => norm(g.name))) };
+}
+async function checkLibraries(){
+  const ids = participants();
+  if (!ids.length) return setStatus('#libStatus', 'Select some friends first.');
+  if (S.demo) { renderAll(); return; }
+  $('#libBtn').disabled = true;
+  setStatus('#libStatus', 'Checking libraries…');
+  await Promise.all(ids.filter(id => !libs[id]).map(async id => {
+    try { const r = await api('owned', { steamid:id }); setLib(id, r.private ? null : r.games); }
+    catch { /* leave unknown */ }
+  }));
+  $('#libBtn').disabled = false;
+  renderAll();
+}
+
+// ---------- Ownership ----------
+function owns(lib, g){ return (g.appid && lib.ids.has(g.appid)) || lib.names.has(norm(g.name)); }
+function knownLibs(){ return participants().map(id => libs[id]).filter(l => l && !l.private); }
+function ownerCount(g){ return knownLibs().filter(l => owns(l, g)).length; }
+function passesFilter(g){
+  const n = knownLibs().length;
+  if (!n || S.filter === 'all') return true;
+  const c = ownerCount(g);
+  return S.filter === 'everyone' ? c === n : c >= Math.ceil(n / 2);
+}
+
+// ---------- Wheel ----------
+const canvas = $('#wheel'), ctx = canvas.getContext('2d');
+function wheelItems(){
+  if (S.mode === 'friends') return participants().map(id => ({ label:personName(id), id })).filter(i => !knocked.has(i.label));
+  return cat().games.filter(passesFilter).filter(g => !knocked.has(g.name)).map(g => ({ label:g.name, game:g }));
+}
+function shade(hex, amt){
+  const n = parseInt(hex.slice(1), 16);
+  const f = v => Math.max(0, Math.min(255, Math.round(v + (amt < 0 ? v : 255 - v) * amt)));
+  return `rgb(${f(n>>16)},${f((n>>8)&255)},${f(n&255)})`;
+}
+function drawWheel(){
+  const items = wheelItems(), W = canvas.width, R = W/2 - 16, cx = W/2, cy = W/2, c = cat().color;
+  ctx.clearRect(0, 0, W, W);
+  ctx.beginPath(); ctx.arc(cx, cy, R + 10, 0, Math.PI*2); ctx.fillStyle = '#0b0f14'; ctx.fill();
+  if (!items.length) {
+    ctx.beginPath(); ctx.arc(cx, cy, R, 0, Math.PI*2); ctx.fillStyle = '#1c2330'; ctx.fill();
+    ctx.fillStyle = '#8b98a9'; ctx.font = '600 40px system-ui'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillText(S.mode === 'friends' ? 'Select some friends' : 'No games match', cx, cy);
+    return;
+  }
+  const seg = Math.PI*2 / items.length;
+  const tones = [0, -0.28, 0.25, -0.45, 0.45, -0.12];
+  const fontSize = Math.max(18, Math.min(44, 520 / Math.max(items.length, 6) * 1.6));
+  items.forEach((it, i) => {
+    const a0 = rotation + i*seg, a1 = a0 + seg;
+    ctx.beginPath(); ctx.moveTo(cx, cy); ctx.arc(cx, cy, R, a0, a1); ctx.closePath();
+    ctx.fillStyle = items.length === 1 ? c : shade(c, tones[(i % tones.length === 0 && i === items.length - 1 && i) ? 1 : i % tones.length]);
+    ctx.fill(); ctx.strokeStyle = '#0b0f14'; ctx.lineWidth = 4; ctx.stroke();
+    ctx.save(); ctx.translate(cx, cy); ctx.rotate(a0 + seg/2);
+    ctx.fillStyle = '#0b0f14'; ctx.font = `700 ${fontSize}px system-ui`; ctx.textAlign = 'right'; ctx.textBaseline = 'middle';
+    let t = it.label; const max = R - 110;
+    while (ctx.measureText(t).width > max && t.length > 2) t = t.slice(0, -2) + '…';
+    ctx.fillText(t, R - 26, 0); ctx.restore();
+  });
+  ctx.beginPath(); ctx.arc(cx, cy, 64, 0, Math.PI*2); ctx.fillStyle = '#0b0f14'; ctx.fill();
+  ctx.lineWidth = 6; ctx.strokeStyle = c; ctx.stroke();
+  ctx.font = '56px system-ui'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(cat().emoji, cx, cy + 3);
+}
+
+let audio;
+function tick(){
+  if (!S.sound) return;
+  try {
+    audio ||= new AudioContext();
+    const o = audio.createOscillator(), g = audio.createGain();
+    o.frequency.value = 900 + rand()*200; o.type = 'triangle';
+    g.gain.setValueAtTime(0.08, audio.currentTime); g.gain.exponentialRampToValueAtTime(0.0001, audio.currentTime + 0.05);
+    o.connect(g).connect(audio.destination); o.start(); o.stop(audio.currentTime + 0.06);
+  } catch {}
+}
+function spin(){
+  const items = wheelItems();
+  if (spinning || !items.length) return;
+  spinning = true; renderSpinBtn(); $('#modal').classList.remove('open');
+  const n = items.length, seg = Math.PI*2/n, win = Math.floor(rand()*n);
+  const TAU = Math.PI*2, pointer = -Math.PI/2;
+  const target = pointer - (win + 0.5)*seg + (rand() - 0.5)*seg*0.7;
+  const delta = ((target - rotation) % TAU + TAU) % TAU + TAU * (5 + Math.floor(rand()*3));
+  const start = rotation, dur = 5200 + rand()*1200, t0 = performance.now();
+  const segAt = r => Math.floor((((pointer - r) % TAU + TAU) % TAU) / seg);
+  let last = segAt(start);
+  const ease = t => 1 - Math.pow(1 - t, 4);
+  (function frame(now){
+    const t = Math.min(1, (now - t0)/dur);
+    rotation = start + delta*ease(t);
+    const s = segAt(rotation); if (s !== last) { last = s; tick(); }
+    drawWheel();
+    if (t < 1) return requestAnimationFrame(frame);
+    rotation %= TAU; spinning = false; renderSpinBtn(); showResult(items[win]);
+  })(t0);
+}
+function showResult(item){
+  const c = cat();
+  const isGame = S.mode === 'games';
+  let flavor = pick(c.flavor);
+  const people = participants();
+  if (isGame && c.id === 'ruin' && people.length) flavor += ` Blame ${personName(pick(people))} when it goes wrong.`;
+  if (!isGame) flavor = pick(['The wheel has chosen.','No take-backs.','Destiny is cruel.']) + (c.id === 'ruin' ? ' They pick the game AND take the blame.' : ' They pick the game.');
+  $('#rKicker').textContent = `${c.emoji} ${c.name} · ${isGame ? "Tonight we're playing" : 'The chosen one'}`;
+  $('#rBig').textContent = item.label;
+  $('#rFlavor').textContent = flavor;
+  const launch = $('#rLaunch');
+  launch.hidden = !(isGame && item.game.appid);
+  if (!launch.hidden) launch.href = `steam://run/${item.game.appid}`;
+  $('#resultCard').style.setProperty('--c', c.color);
+  $('#modal').classList.add('open');
+  S.history.unshift({ cat:c.emoji, label:item.label, t:Date.now() });
+  S.history = S.history.slice(0, 15);
+  if (S.knockout) knocked.add(item.label);
+  save(); renderAll();
+}
+
+// ---------- Rendering ----------
+function setStatus(sel, msg, err){ const el = $(sel); el.textContent = msg; el.classList.toggle('err', !!err); }
+function avatarHtml(p){
+  return p.avatar ? `<img class="avatar" src="${esc(p.avatar)}" alt="" loading="lazy">`
+    : `<div class="avatar" style="background:${esc(p.color || '#2a3342')}">${esc((p.name || '?').slice(0,2).toUpperCase())}</div>`;
+}
+function renderMe(){
+  $('#demoBadge').hidden = !S.demo;
+  $('#meCard').innerHTML = S.me ? `<div class="me">${avatarHtml(S.me)}<div class="meta" style="min-width:0">
+    <div class="name">${esc(S.me.name)}</div><div class="count">${S.friends.length} friends</div></div></div>` : '';
+}
+function renderFriends(){
+  const q = norm($('#search').value);
+  const list = S.friends.filter(f => !q || norm(f.name).includes(q));
+  $('#selCount').textContent = S.selected.length ? `· ${S.selected.length} selected` : '';
+  if (!S.friends.length) { $('#friends').innerHTML = `<div class="empty">Load your profile above to see your friends.</div>`; return; }
+  $('#friends').innerHTML = list.map(f => {
+    const sel = S.selected.includes(f.steamid);
+    const cls = f.game ? 'ingame' : f.state ? 'online' : '';
+    const lib = libs[f.steamid];
+    const libNote = lib ? (lib.private ? ' · 🔒 library private' : ` · ${lib.games.length} games`) : '';
+    return `<div class="friend ${sel ? 'sel' : ''}" data-id="${esc(f.steamid)}" role="checkbox" aria-checked="${sel}" tabindex="0">
+      <div class="check">${sel ? '✓' : ''}</div>${avatarHtml(f)}
+      <div class="meta"><div class="name">${esc(f.name)}</div><div class="sub ${cls}">${esc(stateText(f))}${esc(libNote)}</div></div></div>`;
+  }).join('') || `<div class="empty">No friends match.</div>`;
+}
+function renderCats(){
+  $('#cats').innerHTML = S.categories.map(c =>
+    `<button class="cat ${c.id === S.activeCat ? 'active' : ''}" data-cat="${esc(c.id)}" style="--c:${esc(c.color)}">${esc(c.emoji)} ${esc(c.name)}</button>`
+  ).join('') + `<button class="cat" id="newCat" title="Make a new wheel">＋ New wheel</button>`;
+  const c = cat();
+  $('#catTitle').textContent = `${c.emoji} ${c.name}`;
+  $('#catTag').textContent = c.tagline;
+  document.querySelector('.wheel-card').style.setProperty('--c', c.color);
+  $('#resetCatBtn').hidden = !DEFAULT_CATS.some(d => d.id === c.id);
+}
+function renderGames(){
+  const n = knownLibs().length;
+  const games = cat().games;
+  $('#games').innerHTML = games.map((g, i) => {
+    let badge = '';
+    if (n) { const k = ownerCount(g); badge = `<span class="own ${k === n ? 'all' : k ? 'some' : 'none'}" title="Owned by ${k} of ${n} checked libraries">${k}/${n} own</span>`; }
+    const out = !passesFilter(g) || knocked.has(g.name);
+    return `<div class="game ${out ? 'out' : ''}"><span class="gname" title="${esc(g.name)}">${esc(g.name)}</span>${badge}<button class="x" data-del="${i}" title="Remove">×</button></div>`;
+  }).join('') || `<div class="empty">No games yet. Add some below.</div>`;
+  // library suggestions
+  const counts = new Map();
+  knownLibs().forEach(l => l.games.forEach(g => { const e = counts.get(g.appid) || { name:g.name, n:0 }; e.n++; counts.set(g.appid, e); }));
+  $('#libList').innerHTML = [...counts.values()].sort((a,b) => b.n - a.n).slice(0, 400).map(e => `<option value="${esc(e.name)}">`).join('');
+}
+function renderSeg(){
+  document.querySelectorAll('#modeSeg button').forEach(b => b.classList.toggle('on', b.dataset.mode === S.mode));
+  document.querySelectorAll('#filterSeg button').forEach(b => b.classList.toggle('on', b.dataset.filter === S.filter));
+  $('#filterRow').style.display = S.mode === 'games' ? '' : 'none';
+  $('#includeMe').checked = S.includeMe;
+  $('#knockout').checked = S.knockout;
+  $('#resetKO').hidden = !knocked.size;
+  $('#soundBtn').textContent = S.sound ? '🔊' : '🔇';
+  const ids = participants(), known = ids.filter(id => libs[id]);
+  const priv = ids.filter(id => libs[id]?.private).map(personName);
+  let msg = '';
+  if (S.mode === 'games') {
+    if (!ids.length) msg = 'Select friends to filter by what everyone owns.';
+    else if (!known.length) msg = `Check libraries to see who owns what (${ids.length} people).`;
+    else msg = `${knownLibs().length} of ${ids.length} libraries checked.` + (priv.length ? ` Private: ${priv.join(', ')}.` : '');
+  }
+  if (!$('#libBtn').disabled) setStatus('#libStatus', msg);
+}
+function renderSpinBtn(){ $('#spinBtn').disabled = spinning || !wheelItems().length; }
+function renderHistory(){
+  $('#history').innerHTML = S.history.map(h =>
+    `<li><span>${esc(h.cat)}</span><span>${esc(h.label)}</span><span>${new Date(h.t).toLocaleString([], { weekday:'short', hour:'numeric', minute:'2-digit' })}</span></li>`
+  ).join('') || `<li class="empty" style="border:0">No spins yet.</li>`;
+}
+function commonGames(){
+  const ids = participants().filter(id => libs[id] && !libs[id].private);
+  const n = ids.length, map = new Map();
+  ids.forEach(id => libs[id].games.forEach(g => {
+    const e = map.get(g.appid) || { appid:g.appid, name:g.name, owners:[], minutes:0 };
+    if (!e.owners.includes(id)) { e.owners.push(id); e.minutes += g.minutes || 0; }
+    map.set(g.appid, e);
+  }));
+  const need = S.common === 'miss1' ? n - 1 : n;
+  const list = n < (S.common === 'miss1' ? 2 : 1) ? [] : [...map.values()].filter(e => e.owners.length === need);
+  list.forEach(e => e.missing = ids.filter(id => !e.owners.includes(id)));
+  return { n, ids, list: list.sort((a,b) => b.minutes - a.minutes || a.name.localeCompare(b.name)) };
+}
+const hrs = m => m >= 60 ? `${Math.round(m/60).toLocaleString()} hrs` : m ? `${m} min` : 'never played';
+function renderCommon(){
+  document.querySelectorAll('#tabSeg button').forEach(b => b.classList.toggle('on', b.dataset.tab === S.tab));
+  $('#wheelsView').hidden = S.tab !== 'wheels';
+  $('#commonView').hidden = S.tab !== 'common';
+  if (S.tab !== 'common') return;
+  document.querySelectorAll('#commonSeg button').forEach(b => b.classList.toggle('on', b.dataset.common === S.common));
+  const all = participants(), { n, list } = commonGames();
+  const priv = all.filter(id => libs[id]?.private).map(personName);
+  const unchecked = all.filter(id => !libs[id]);
+  const c = cat();
+  let msg;
+  if (!all.length) msg = 'Select friends on the left to see what you all own.';
+  else if (!n) msg = unchecked.length ? 'Press "Check libraries" to compare everyone\'s games.' : 'Nobody selected has a public game library.';
+  else {
+    msg = `Comparing ${n} ${n === 1 ? 'library' : 'libraries'}: ${list.length} ${S.common === 'miss1' ? 'games owned by all but one' : 'games in common'}, most played first.`;
+    if (priv.length) msg += ` Left out (library private): ${priv.join(', ')}.`;
+    if (unchecked.length) msg += ` Not checked yet: ${unchecked.map(personName).join(', ')}.`;
+    if (list.length) msg += ` "Add" puts a game on the ${c.emoji} ${c.name} wheel.`;
+  }
+  if (!$('#commonCheckBtn').disabled) setStatus('#commonStatus', msg);
+  const q = norm($('#commonSearch').value);
+  const shown = list.filter(e => !q || norm(e.name).includes(q));
+  const onWheel = new Set(c.games.map(g => norm(g.name)));
+  $('#commonList').innerHTML = shown.slice(0, 300).map(e => {
+    const added = onWheel.has(norm(e.name));
+    const miss = e.missing.length ? ` · <span class="missing">${esc(e.missing.map(personName).join(', '))} doesn't own it</span>` : '';
+    return `<div class="cg"><img src="https://cdn.cloudflare.steamstatic.com/steam/apps/${+e.appid}/capsule_184x69.jpg" alt="" loading="lazy" onerror="this.style.visibility='hidden'">
+      <div class="meta"><div class="gname" title="${esc(e.name)}">${esc(e.name)}</div>
+      <div class="sub">${esc(hrs(e.minutes))} played between you${miss}</div></div>
+      <button class="btn small" data-add="${+e.appid}" ${added ? 'disabled' : ''}>${added ? 'On wheel' : '＋ Add'}</button></div>`;
+  }).join('') || (n ? `<div class="empty">${q ? 'No games match that search.' : 'No games found.'}</div>` : '');
+}
+function renderAll(){ renderMe(); renderFriends(); renderCats(); renderSeg(); renderGames(); renderHistory(); drawWheel(); renderSpinBtn(); renderCommon(); }
+
+// ---------- Demo ----------
+function startDemo(){
+  const people = [['Ash','#ff6b81',1],['Blaze','#ffb454',0],['Cass','#7ee2b8',1],['Dex','#9db4ff',2],['Echo','#c084fc',0],['Finn','#f2cc60',1],['Gigi','#56d364',0],['Hex','#ff7b72',1]];
+  const all = [...new Map(DEFAULT_CATS.flatMap(c => toGames(c.games)).map(g => [g.appid, g])).values()];
+  S.demo = true;
+  S.me = { steamid:'76561190000000000', name:'You', color:'#66c0f4', state:1 };
+  S.friends = people.map(([name, color, st], i) => ({ steamid:String(76561190000000001n + BigInt(i)), name, color,
+    state:st ? 1 : 0, game: st === 2 ? 'Deep Rock Galactic' : null }));
+  S.selected = S.friends.slice(0, 4).map(f => f.steamid);
+  for (const k in libs) delete libs[k];
+  [S.me, ...S.friends].forEach((p, i) => i === 5 ? setLib(p.steamid, null)
+    : setLib(p.steamid, all.filter(() => rand() < 0.65).map(g => ({ ...g, minutes: Math.floor(rand()*5000) }))));
+  sortFriends();
+  $('#demoBox').hidden = true;
+  setStatus('#meStatus', 'Demo squad loaded. Libraries are random.');
+  save(); renderAll();
+}
+
+// ---------- Events ----------
+// Pull the 32-character key out of whatever was pasted ("Key: ABC…", quotes, spaces, line breaks).
+const findKey = s => (String(s).replace(/\s+/g, ' ').match(/(?:^|[^A-Za-z0-9])([A-Za-z0-9]{32})(?![A-Za-z0-9])/) || [])[1] || '';
+function useKey(reload = true){
+  const raw = $('#keyInput').value.trim();
+  const k = raw ? findKey(raw) : '';
+  if (raw && !k) { setStatus('#keyStatus', "That doesn't look like a Steam API key. It should be 32 letters and numbers.", true); return false; }
+  apiKey = k;
+  $('#keyInput').value = '';
+  $('#keyInput').placeholder = k ? '••••••••••••••••  (key set)' : 'Paste your Steam Web API key';
+  $('#keyBtn').textContent = k ? 'Change' : 'Use';
+  $('#keyState').textContent = k ? '· set' : '';
+  setStatus('#keyStatus', k ? 'Key set for this tab. It disappears when you close or reload the page.' : 'Key cleared.');
+  if (k) { $('#demoBox').hidden = true; for (const id in libs) delete libs[id]; if (reload && $('#meInput').value.trim()) loadMe(); }
+  return true;
+}
+$('#keyBtn').onclick = () => useKey();
+$('#keyInput').onkeydown = e => e.key === 'Enter' && useKey();
+// apply automatically as soon as a valid key is pasted or typed
+$('#keyInput').oninput = () => { if (findKey($('#keyInput').value)) useKey(); };
+$('#tabSeg').onclick = e => {
+  const t = e.target.closest('button')?.dataset.tab; if (!t || spinning) return;
+  S.tab = t; renderAll();
+  if (t === 'common' && participants().some(id => !libs[id]) && !S.demo) commonCheck();
+};
+$('#commonSeg').onclick = e => { const c = e.target.closest('button')?.dataset.common; if (c) { S.common = c; renderCommon(); } };
+$('#commonSearch').oninput = renderCommon;
+async function commonCheck(){
+  if (!participants().length) return renderCommon();
+  $('#commonCheckBtn').disabled = true;
+  setStatus('#commonStatus', 'Checking libraries…');
+  try { await checkLibraries(); } finally { $('#commonCheckBtn').disabled = false; renderCommon(); }
+}
+$('#commonCheckBtn').onclick = commonCheck;
+$('#commonList').onclick = e => {
+  const id = e.target.dataset.add; if (!id) return;
+  const g = commonGames().list.find(x => String(x.appid) === id); if (!g) return;
+  const c = cat();
+  if (!c.games.some(x => norm(x.name) === norm(g.name))) c.games.push({ name:g.name, appid:g.appid });
+  renderAll();
+};
+$('#loadBtn').onclick = loadMe;
+$('#meInput').onkeydown = e => e.key === 'Enter' && loadMe();
+$('#addFriendBtn').onclick = addFriend;
+$('#addFriendInput').onkeydown = e => e.key === 'Enter' && addFriend();
+$('#demoBtn').onclick = startDemo;
+$('#search').oninput = renderFriends;
+$('#allBtn').onclick = () => { const q = norm($('#search').value); S.selected = [...new Set([...S.selected, ...S.friends.filter(f => !q || norm(f.name).includes(q)).map(f => f.steamid)])]; save(); renderAll(); };
+$('#noneBtn').onclick = () => { S.selected = []; save(); renderAll(); };
+function toggleFriend(el){
+  const id = el.dataset.id;
+  S.selected = S.selected.includes(id) ? S.selected.filter(x => x !== id) : [...S.selected, id];
+  save(); renderAll();
+  if (libs[id] === undefined && !S.demo && (S.tab === 'common' || (S.mode === 'games' && knownLibs().length))) {
+    S.tab === 'common' ? commonCheck() : checkLibraries();
+  }
+}
+$('#friends').onclick = e => { const el = e.target.closest('.friend'); if (el) toggleFriend(el); };
+$('#friends').onkeydown = e => { const el = e.target.closest('.friend'); if (el && (e.key === ' ' || e.key === 'Enter')) { e.preventDefault(); toggleFriend(el); } };
+$('#includeMe').onchange = e => { S.includeMe = e.target.checked; save(); renderAll(); };
+$('#cats').onclick = e => {
+  if (e.target.id === 'newCat') return newCategory();
+  const b = e.target.closest('[data-cat]'); if (!b || spinning) return;
+  S.activeCat = b.dataset.cat; knocked.clear(); save(); renderAll();
+};
+$('#modeSeg').onclick = e => { const m = e.target.closest('button')?.dataset.mode; if (m && !spinning) { S.mode = m; knocked.clear(); save(); renderAll(); } };
+$('#filterSeg').onclick = e => {
+  const f = e.target.closest('button')?.dataset.filter; if (!f || spinning) return;
+  S.filter = f; save(); renderAll();
+  if (f !== 'all' && !knownLibs().length) checkLibraries();
+};
+$('#libBtn').onclick = checkLibraries;
+$('#spinBtn').onclick = spin;
+$('#rAgain').onclick = spin;
+$('#rClose').onclick = () => $('#modal').classList.remove('open');
+$('#modal').onclick = e => { if (e.target.id === 'modal') $('#modal').classList.remove('open'); };
+document.addEventListener('keydown', e => { if (e.key === 'Escape') $('#modal').classList.remove('open'); });
+$('#knockout').onchange = e => { S.knockout = e.target.checked; save(); renderSeg(); };
+$('#resetKO').onclick = () => { knocked.clear(); renderAll(); };
+$('#soundBtn').onclick = () => { S.sound = !S.sound; save(); renderSeg(); };
+$('#games').onclick = e => {
+  const i = e.target.dataset.del; if (i === undefined || spinning) return;
+  cat().games.splice(+i, 1); save(); renderAll();
+};
+function addGame(){
+  const name = $('#addGameInput').value.trim(); if (!name) return;
+  const c = cat();
+  if (c.games.some(g => norm(g.name) === norm(name))) return void ($('#addGameInput').value = '');
+  let appid = null;
+  for (const l of knownLibs()) { const g = l.games.find(g => norm(g.name) === norm(name)); if (g) { appid = g.appid; break; } }
+  c.games.push({ name, appid });
+  $('#addGameInput').value = ''; save(); renderAll();
+}
+$('#addGameBtn').onclick = addGame;
+$('#addGameInput').onkeydown = e => e.key === 'Enter' && addGame();
+$('#sharedBtn').onclick = async () => {
+  if (!knownLibs().length) await checkLibraries();
+  const ls = knownLibs();
+  if (!ls.length) return setStatus('#libStatus', 'No public libraries to compare yet. Select friends first.', true);
+  const c = cat(), have = new Set(c.games.map(g => norm(g.name)));
+  const shared = ls[0].games.filter(g => ls.every(l => owns(l, g)) && !have.has(norm(g.name)))
+    .map(g => ({ ...g, total: ls.reduce((s, l) => s + (l.games.find(x => x.appid === g.appid)?.minutes || 0), 0) }))
+    .sort((a,b) => b.total - a.total).slice(0, 10);
+  if (!shared.length) return setStatus('#libStatus', 'No new games that everyone owns.');
+  c.games.push(...shared.map(g => ({ name:g.name, appid:g.appid })));
+  save(); renderAll();
+  setStatus('#libStatus', `Added ${shared.length} games you all own (most played first).`);
+};
+$('#resetCatBtn').onclick = () => {
+  const d = freshCats().find(x => x.id === S.activeCat);
+  if (d && confirm(`Reset "${d.name}" to its starting games?`)) { Object.assign(cat(), d); save(); renderAll(); }
+};
+function newCategory(){
+  const name = prompt('Name for the new wheel (e.g. "Horror Nights")'); if (!name?.trim()) return;
+  const emoji = prompt('Pick an emoji for it', '🎲') || '🎲';
+  const colors = ['#f78166','#56d4dd','#e3b341','#a5d6ff','#ffa7c4','#7ee787'];
+  const c = { id:'c' + Date.now(), name:name.trim().slice(0, 30), emoji:emoji.trim().slice(0, 4), color:pick(colors),
+    tagline:'A wheel of your own making.', flavor:['The wheel has spoken.','No rerolls.','Fate has decided.'], games:[] };
+  S.categories.push(c); S.activeCat = c.id; save(); renderAll();
+}
+$('#catMenuBtn').onclick = () => {
+  const c = cat();
+  const name = prompt('Rename this wheel (clear the box and OK to delete it)', c.name);
+  if (name === null) return;
+  if (!name.trim()) {
+    if (S.categories.length > 1 && confirm(`Delete the "${c.name}" wheel?`)) {
+      S.categories = S.categories.filter(x => x !== c); S.activeCat = S.categories[0].id;
+    }
+  } else c.name = name.trim().slice(0, 30);
+  save(); renderAll();
+};
+
+// ---------- Boot ----------
+$('#meInput').value = S.meInput || '';
+if (S.demo) {
+  // libraries aren't stored, so a reload of demo mode regenerates them
+  startDemo();
+} else {
+  renderAll();
+  if (S.me && S.meInput) loadMe(); // refresh online status
+}
+</script>
+</body>
+</html>
